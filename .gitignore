@@ -1,0 +1,41 @@
+# === Java build output ===
+*.class
+*.jar
+*.war
+*.ear
+
+# === Gradle ===
+.gradle/
+build/
+**/build/
+**/out/
+!gradle/wrapper/gradle-wrapper.jar
+
+# === IntelliJ IDEA ===
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# === VS Code ===
+.vscode/
+
+# === OS-specific ===
+.DS_Store
+Thumbs.db
+
+# === Logs ===
+*.log
+logs/
+nohup.out
+
+# === Environment / Secrets ===
+.env
+.env.*
+*.env
+*.local
+
+# === Test output ===
+test-output/
+coverage/
+jacoco.exec
