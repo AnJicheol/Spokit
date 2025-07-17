@@ -1,74 +1,50 @@
 package com.example.auth.service;
 
-import com.example.auth.dto.KakaoTokenDto;
 import com.example.auth.dto.KakaoUserInfoDto;
-import io.netty.handler.codec.http.HttpHeaderValues;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
+
+import java.util.Collections;
+import java.util.Map;
 
 @Slf4j
-@RequiredArgsConstructor
 @Service
-public class KakaoService {
+public class KakaoService extends DefaultOAuth2UserService {
 
-    private String clientId;
-    private final String KAUTH_TOKEN_URL_HOST ;
-    private final String KAUTH_USER_URL_HOST;
+    @Override
+    public OAuth2User loadUser(OAuth2UserRequest userRequest)
+            throws OAuth2AuthenticationException {
 
-    @Autowired
-    public KakaoService(@Value("${kakao.client_id}") String clientId) {
-        this.clientId = clientId;
-        KAUTH_TOKEN_URL_HOST ="https://kauth.kakao.com";
-        KAUTH_USER_URL_HOST = "https://kapi.kakao.com";
+        // 1. Spring Security가 access token 자동 발급
+        String accessToken = userRequest.getAccessToken().getTokenValue();
+        log.info("[OAuth2UserService] Access Token -> {}", accessToken);
+
+        // 2. 사용자 정보 요청
+        OAuth2User oAuth2User = super.loadUser(userRequest);
+
+        // 3. attributes에서 Kakao 사용자 정보 추출
+        Map<String, Object> attributes = oAuth2User.getAttributes();
+
+        // 카카오의 사용자 정보 구조
+        Map<String, Object> properties = (Map<String, Object>) attributes.get("properties");
+        String nickname = (String) properties.get("nickname");
+
+        log.info("[OAuth2UserService] Kakao nickname -> {}", nickname);
+
+        KakaoUserInfoDto userInfoDto = new KakaoUserInfoDto();
+        log.info("[OAuth2UserService] KakaoUserInfoDto.nickname -> {}", userInfoDto.getNickname());
+
+        // 4. Spring Security 인증 세션에 저장할 유저 객체 리턴
+        return new DefaultOAuth2User(
+                Collections.singleton(new SimpleGrantedAuthority("ROLE_USER")),
+                attributes,
+                "id" // attributes에서 식별자로 쓸 키
+        );
     }
-
-    public String getAccessTokenFromKakao(String code) {
-
-        KakaoTokenDto kakaoTokenDto = WebClient.create(KAUTH_TOKEN_URL_HOST).post()
-                .uri(uriBuilder -> uriBuilder
-                        .scheme("https")
-                        .path("/oauth/token")
-                        .queryParam("grant_type", "authorization_code")
-                        .queryParam("client_id", clientId)
-                        .queryParam("code", code)
-                        .build(true))
-                .header(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED.toString())
-                .retrieve()
-                .bodyToMono(KakaoTokenDto.class)
-                .block();
-
-
-        log.info(" [Kakao Service] Access Token ------> {}", kakaoTokenDto.getAccessToken());
-        log.info(" [Kakao Service] Refresh Token ------> {}", kakaoTokenDto.getRefreshToken());
-        log.info(" [Kakao Service] Id Token ------> {}", kakaoTokenDto.getIdToken());
-        log.info(" [Kakao Service] Scope ------> {}", kakaoTokenDto.getScope());
-
-        return kakaoTokenDto.getAccessToken();
-    }
-
-    public KakaoUserInfoDto getUserInfo(String accessToken) {
-
-        KakaoUserInfoDto userInfo = WebClient.create(KAUTH_USER_URL_HOST)
-                .get()
-                .uri(uriBuilder -> uriBuilder
-                        .scheme("https")
-                        .path("/v2/user/me")
-                        .build(true))
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken) // access token 인가
-                .header(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED.toString())
-                .retrieve()
-                .bodyToMono(KakaoUserInfoDto.class)
-                .block();
-
-        log.info("[ Kakao Service ] Nickname ---> {} ", userInfo.getNickname());
-
-        return userInfo;
-    }
-
-
 }

@@ -1,3 +1,18 @@
-kakao:
-  client_id: 4f0a8b0ef7fefc9faa8691c9eb0fea36
-  redirect_uri: http://localhost:8080/kakao/callback
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            client-id: 4f0a8b0ef7fefc9faa8691c9eb0fea36
+            client-name: Kakao
+            redirect-uri: http://localhost:8080/login/oauth2/code/kakao
+            authorization-grant-type: authorization_code
+            scope:
+              - profile_nickname
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id

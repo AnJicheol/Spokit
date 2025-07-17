@@ -7,41 +7,41 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 @Slf4j
-@Controller
+@RestController
 @RequiredArgsConstructor
 @RequestMapping("")
 public class KakaoController {
 
     private final KakaoService kakaoService;
 
-    @Value("${kakao.client_id}")
-    private String clientId;
+    // 카카오 로그인 성공 후 사용자 정보 확인
+    @GetMapping("/user/info")
+    public String userInfo(@AuthenticationPrincipal OAuth2User oAuth2User) {
+        Map<String, Object> properties = (Map<String, Object>) oAuth2User.getAttributes().get("properties");
+        String nickname = (String) properties.get("nickname");
 
-    @Value("${kakao.redirect_uri}")
-    private String redirectUri;
-
-    @GetMapping("/login")
-    public String login() {
-        String kakaoAuthUrl = "https://kauth.kakao.com/oauth/authorize?response_type=code"
-                + "&client_id=" + clientId
-                + "&redirect_uri=" + redirectUri;
-
-        return "redirect:" + kakaoAuthUrl;
+        return "login: " + nickname;
     }
 
-    @GetMapping("/kakao/callback")
-    public ResponseEntity<?> callback(@RequestParam("code") String code) {
-        String accessToken = kakaoService.getAccessTokenFromKakao(code);
+    // 로그인 여부 확인용 엔드포인트
+    @GetMapping("/login-check")
+    public String checkLogin() {
+        return "login success";
+    }
 
-        KakaoUserInfoDto userInfo = kakaoService.getUserInfo(accessToken);
-
-        // User 로그인, 또는 회원가입 로직 추가
-        return new ResponseEntity<>(HttpStatus.OK);
+    @GetMapping("/")
+    public String home() {
+        return "홈화면";
     }
 }
